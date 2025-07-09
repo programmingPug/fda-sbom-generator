@@ -1,0 +1,371 @@
+"""
+Scanner for .NET/C# projects using NuGet packages.
+"""
+
+import json
+import xml.etree.ElementTree as ET
+from pathlib import Path
+from typing import Dict, List, Optional
+
+from .scanners import BaseScanner
+from .models import Component, ComponentType, License
+
+
+class DotNetScanner(BaseScanner):
+    """Scanner for .NET/C# projects."""
+    
+    def can_scan(self) -> bool:
+        """Check if this is a .NET project."""
+        indicators = [
+            "*.csproj",
+            "*.vbproj",
+            "*.fsproj",
+            "packages.config",
+            "*.sln",
+            "global.json",
+            "Directory.Build.props",
+            "Directory.Packages.props"
+        ]
+        
+        for indicator in indicators:
+            if list(self.project_path.glob(indicator)):
+                return True
+            
+            # Check subdirectories for project files
+            for subdir in self.project_path.iterdir():
+                if subdir.is_dir() and list(subdir.glob(indicator)):
+                    return True
+        
+        return False
+    
+    def scan(self) -> List[Component]:
+        """Scan .NET project for dependencies."""
+        components = []
+        
+        # Find all project files
+        project_files = []
+        for pattern in ["*.csproj", "*.vbproj", "*.fsproj"]:
+            project_files.extend(self.project_path.rglob(pattern))
+        
+        # Scan each project file
+        for project_file in project_files:
+            components.extend(self._scan_project_file(project_file))
+        
+        # Also check for packages.config files (legacy format)
+        packages_config_files = list(self.project_path.rglob("packages.config"))
+        for packages_file in packages_config_files:
+            components.extend(self._scan_packages_config(packages_file))
+        
+        # Check for Directory.Packages.props (Central Package Management)
+        directory_packages = self.project_path / "Directory.Packages.props"
+        if directory_packages.exists():
+            components.extend(self._scan_directory_packages(directory_packages))
+        
+        return components
+    
+    def _scan_project_file(self, project_file: Path) -> List[Component]:
+        """Scan a .csproj/.vbproj/.fsproj file for dependencies."""
+        components = []
+        
+        try:
+            tree = ET.parse(project_file)
+            root = tree.getroot()
+            
+            # Modern SDK-style projects (PackageReference)
+            package_references = root.findall(".//PackageReference")
+            for pkg_ref in package_references:
+                component = self._create_package_reference_component(pkg_ref)
+                if component:
+                    components.append(component)
+            
+            # Framework references
+            framework_references = root.findall(".//FrameworkReference")
+            for fw_ref in framework_references:
+                component = self._create_framework_reference_component(fw_ref)
+                if component:
+                    components.append(component)
+            
+            # Project references (for multi-project solutions)
+            project_references = root.findall(".//ProjectReference")
+            for proj_ref in project_references:
+                component = self._create_project_reference_component(proj_ref, project_file)
+                if component:
+                    components.append(component)
+            
+            # Target framework information
+            target_frameworks = root.findall(".//TargetFramework")
+            target_frameworks.extend(root.findall(".//TargetFrameworks"))
+            
+            for tf in target_frameworks:
+                if tf.text:
+                    # Add .NET runtime as a component
+                    runtime_component = self._create_dotnet_runtime_component(tf.text)
+                    if runtime_component:
+                        components.append(runtime_component)
+        
+        except Exception as e:
+            print(f"Warning: Could not parse project file {project_file}: {e}")
+        
+        return components
+    
+    def _scan_packages_config(self, packages_file: Path) -> List[Component]:
+        """Scan packages.config file (legacy NuGet format)."""
+        components = []
+        
+        try:
+            tree = ET.parse(packages_file)
+            root = tree.getroot()
+            
+            packages = root.findall(".//package")
+            for package in packages:
+                package_id = package.get("id")
+                version = package.get("version")
+                target_framework = package.get("targetFramework")
+                
+                if package_id and version:
+                    component = Component(
+                        name=package_id,
+                        version=version,
+                        type=ComponentType.LIBRARY,
+                        package_manager="nuget",
+                        package_url=f"pkg:nuget/{package_id}@{version}",
+                        description=f"NuGet package (target: {target_framework})" if target_framework else "NuGet package"
+                    )
+                    components.append(component)
+        
+        except Exception as e:
+            print(f"Warning: Could not parse packages.config {packages_file}: {e}")
+        
+        return components
+    
+    def _scan_directory_packages(self, directory_packages_file: Path) -> List[Component]:
+        """Scan Directory.Packages.props for centrally managed packages."""
+        components = []
+        
+        try:
+            tree = ET.parse(directory_packages_file)
+            root = tree.getroot()
+            
+            package_versions = root.findall(".//PackageVersion")
+            for pkg_version in package_versions:
+                package_id = pkg_version.get("Include")
+                version = pkg_version.get("Version")
+                
+                if package_id and version:
+                    component = Component(
+                        name=package_id,
+                        version=version,
+                        type=ComponentType.LIBRARY,
+                        package_manager="nuget",
+                        package_url=f"pkg:nuget/{package_id}@{version}",
+                        description="NuGet package (centrally managed)"
+                    )
+                    components.append(component)
+        
+        except Exception as e:
+            print(f"Warning: Could not parse Directory.Packages.props {directory_packages_file}: {e}")
+        
+        return components
+    
+    def _create_package_reference_component(self, package_ref) -> Optional[Component]:
+        """Create component from PackageReference element."""
+        package_id = package_ref.get("Include")
+        version = package_ref.get("Version")
+        
+        # Version might be in a child element
+        if not version:
+            version_elem = package_ref.find("Version")
+            if version_elem is not None:
+                version = version_elem.text
+        
+        if not package_id:
+            return None
+        
+        # Get additional metadata
+        private_assets = package_ref.get("PrivateAssets")
+        include_assets = package_ref.get("IncludeAssets")
+        exclude_assets = package_ref.get("ExcludeAssets")
+        
+        description_parts = ["NuGet package"]
+        if private_assets:
+            description_parts.append(f"PrivateAssets: {private_assets}")
+        if include_assets:
+            description_parts.append(f"IncludeAssets: {include_assets}")
+        if exclude_assets:
+            description_parts.append(f"ExcludeAssets: {exclude_assets}")
+        
+        component = Component(
+            name=package_id,
+            version=version or "unknown",
+            type=ComponentType.LIBRARY,
+            package_manager="nuget",
+            package_url=f"pkg:nuget/{package_id}@{version or 'unknown'}",
+            description="; ".join(description_parts)
+        )
+        
+        return component
+    
+    def _create_framework_reference_component(self, framework_ref) -> Optional[Component]:
+        """Create component from FrameworkReference element."""
+        framework_name = framework_ref.get("Include")
+        
+        if not framework_name:
+            return None
+        
+        # Common .NET frameworks
+        framework_descriptions = {
+            "Microsoft.NETCore.App": ".NET Core Runtime",
+            "Microsoft.AspNetCore.App": "ASP.NET Core Runtime",
+            "Microsoft.WindowsDesktop.App": "Windows Desktop Runtime"
+        }
+        
+        description = framework_descriptions.get(framework_name, f".NET Framework: {framework_name}")
+        
+        component = Component(
+            name=framework_name,
+            version="runtime",
+            type=ComponentType.FRAMEWORK,
+            package_manager="dotnet",
+            description=description,
+            supplier="Microsoft Corporation"
+        )
+        
+        return component
+    
+    def _create_project_reference_component(self, project_ref, current_project_file: Path) -> Optional[Component]:
+        """Create component from ProjectReference element."""
+        project_path = project_ref.get("Include")
+        
+        if not project_path:
+            return None
+        
+        # Resolve relative path
+        try:
+            referenced_project = (current_project_file.parent / project_path).resolve()
+            project_name = referenced_project.stem
+            
+            component = Component(
+                name=project_name,
+                version="local",
+                type=ComponentType.APPLICATION,
+                package_manager="dotnet",
+                description=f"Project reference: {project_path}",
+                file_path=str(referenced_project.relative_to(self.project_path))
+            )
+            
+            return component
+        
+        except Exception as e:
+            print(f"Warning: Could not resolve project reference {project_path}: {e}")
+            return None
+    
+    def _create_dotnet_runtime_component(self, target_framework: str) -> Optional[Component]:
+        """Create component for .NET runtime."""
+        # Parse target framework (e.g., net6.0, netstandard2.0, net48)
+        runtime_info = self._parse_target_framework(target_framework)
+        
+        if not runtime_info:
+            return None
+        
+        component = Component(
+            name=runtime_info["name"],
+            version=runtime_info["version"],
+            type=ComponentType.FRAMEWORK,
+            package_manager="dotnet",
+            description=f".NET Target Framework: {target_framework}",
+            supplier="Microsoft Corporation"
+        )
+        
+        return component
+    
+    def _parse_target_framework(self, target_framework: str) -> Optional[Dict[str, str]]:
+        """Parse target framework string into name and version."""
+        tf = target_framework.lower().strip()
+        
+        # .NET Core/.NET 5+
+        if tf.startswith("net") and not tf.startswith("netstandard") and not tf.startswith("netframework"):
+            if tf == "net5.0":
+                return {"name": ".NET", "version": "5.0"}
+            elif tf == "net6.0":
+                return {"name": ".NET", "version": "6.0"}
+            elif tf == "net7.0":
+                return {"name": ".NET", "version": "7.0"}
+            elif tf == "net8.0":
+                return {"name": ".NET", "version": "8.0"}
+            elif tf.startswith("netcoreapp"):
+                version = tf.replace("netcoreapp", "")
+                return {"name": ".NET Core", "version": version}
+            elif tf.startswith("net4"):
+                version = tf.replace("net", "").replace("4", "4.")
+                return {"name": ".NET Framework", "version": version}
+        
+        # .NET Standard
+        elif tf.startswith("netstandard"):
+            version = tf.replace("netstandard", "")
+            return {"name": ".NET Standard", "version": version}
+        
+        # .NET Framework
+        elif tf.startswith("netframework"):
+            version = tf.replace("netframework", "")
+            return {"name": ".NET Framework", "version": version}
+        
+        return None
+    
+    def get_dotnet_info(self) -> Dict[str, str]:
+        """Get .NET SDK and runtime information from the system."""
+        dotnet_info = {}
+        
+        try:
+            # Get .NET version
+            result = self._run_command(["dotnet", "--version"])
+            if result.returncode == 0:
+                dotnet_info["sdk_version"] = result.stdout.strip()
+            
+            # Get runtime info
+            result = self._run_command(["dotnet", "--list-runtimes"])
+            if result.returncode == 0:
+                runtimes = []
+                for line in result.stdout.split('\n'):
+                    if line.strip():
+                        runtimes.append(line.strip())
+                dotnet_info["runtimes"] = runtimes
+        
+        except Exception as e:
+            print(f"Warning: Could not get .NET info: {e}")
+        
+        return dotnet_info
+    
+    def scan_nuget_packages_from_lockfile(self, project_dir: Path) -> List[Component]:
+        """Scan packages.lock.json for exact package versions."""
+        components = []
+        
+        packages_lock = project_dir / "packages.lock.json"
+        if not packages_lock.exists():
+            return components
+        
+        try:
+            with open(packages_lock, 'r', encoding='utf-8') as f:
+                lock_data = json.load(f)
+            
+            # Parse dependencies from lock file
+            dependencies = lock_data.get("dependencies", {})
+            
+            for target_framework, packages in dependencies.items():
+                for package_name, package_info in packages.items():
+                    version = package_info.get("resolved", "unknown")
+                    package_type = package_info.get("type", "Direct")
+                    
+                    component = Component(
+                        name=package_name,
+                        version=version,
+                        type=ComponentType.LIBRARY,
+                        package_manager="nuget",
+                        package_url=f"pkg:nuget/{package_name}@{version}",
+                        description=f"NuGet package ({package_type}, {target_framework})"
+                    )
+                    components.append(component)
+        
+        except Exception as e:
+            print(f"Warning: Could not parse packages.lock.json {packages_lock}: {e}")
+        
+        return components

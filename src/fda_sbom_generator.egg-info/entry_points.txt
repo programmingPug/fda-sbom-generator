@@ -1,0 +1,3 @@
+[console_scripts]
+fda-sbom = fda_sbom.cli:main
+fda-sbom-ui = fda_sbom.ui.app:main

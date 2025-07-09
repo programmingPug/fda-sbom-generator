@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+
+{% block title %}Solution SBOM - FDA SBOM Generator{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="text-center mb-4">
+                <h1 class="display-5 fw-bold">
+                    <i class="fas fa-project-diagram text-success me-3"></i>
+                    Solution SBOM
+                </h1>
+                <p class="lead text-muted">Generate SBOMs for multi-project solutions and workspaces</p>
+            </div>
+
+            <div class="form-section">
+                <form method="POST">
+                    <!-- Basic Information -->
+                    <div class="mb-4">
+                        <h4 class="section-title">
+                            <i class="fas fa-info-circle me-2"></i>Solution Information
+                        </h4>
+                        
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="solution_path" class="form-label">Solution Path *</label>
+                                <input type="text" class="form-control" id="solution_path" name="solution_path" 
+                                       value="{{ form_data.solution_path if form_data else '.' }}" 
+                                       placeholder="./my-solution" required>
+                                <div class="form-text">Path to the solution directory</div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="manufacturer" class="form-label">Manufacturer *</label>
+                                <input type="text" class="form-control" id="manufacturer" name="manufacturer" 
+                                       value="{{ form_data.manufacturer if form_data else '' }}" 
+                                       placeholder="Acme Medical Devices Inc" required>
+                                <div class="form-text">Device manufacturer name</div>
+                            </div>
+                        </div>
+                        
+                        <div class="row g-3 mt-2">
+                            <div class="col-md-6">
+                                <label for="solution_name" class="form-label">Solution Name</label>
+                                <input type="text" class="form-control" id="solution_name" name="solution_name" 
+                                       value="{{ form_data.solution_name if form_data else '' }}" 
+                                       placeholder="Medical Device Platform">
+                                <div class="form-text">Name of the solution/workspace</div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="output_dir" class="form-label">Output Directory</label>
+                                <input type="text" class="form-control" id="output_dir" name="output_dir" 
+                                       value="{{ form_data.output_dir if form_data else '' }}" 
+                                       placeholder="./sboms">
+                                <div class="form-text">Directory for generated SBOMs (default: ./sboms)</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Output Options -->
+                    <div class="mb-4">
+                        <h4 class="section-title">
+                            <i class="fas fa-file-export me-2"></i>Output Options
+                        </h4>
+                        
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="format" class="form-label">Output Format</label>
+                                <select class="form-select" id="format" name="format">
+                                    <option value="spdx" {{ 'selected' if form_data and form_data.format == 'spdx' else '' }}>SPDX (Recommended)</option>
+                                    <option value="cyclonedx" {{ 'selected' if form_data and form_data.format == 'cyclonedx' else '' }}>CycloneDX</option>
+                                    <option value="swid" {{ 'selected' if form_data and form_data.format == 'swid' else '' }}>SWID</option>
+                                    <option value="json" {{ 'selected' if form_data and form_data.format == 'json' else '' }}>JSON</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="row g-3 mt-2">
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="individual_sboms" name="individual_sboms" 
+                                           {{ 'checked' if not form_data or form_data.individual_sboms else 'checked' }}>
+                                    <label class="form-check-label" for="individual_sboms">
+                                        Generate individual project SBOMs
+                                    </label>
+                                    <div class="form-text">Create separate SBOM for each project</div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="solution_sbom" name="solution_sbom" 
+                                           {{ 'checked' if form_data and form_data.solution_sbom else '' }}>
+                                    <label class="form-check-label" for="solution_sbom">
+                                        Generate consolidated solution SBOM
+                                    </label>
+                                    <div class="form-text">Create merged SBOM for entire solution</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Advanced Options -->
+                    <div class="mb-4">
+                        <h4 class="section-title">
+                            <i class="fas fa-cog me-2"></i>Advanced Options
+                        </h4>
+                        
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="no_vulnerabilities" name="no_vulnerabilities" 
+                                           {{ 'checked' if form_data and form_data.no_vulnerabilities else '' }}>
+                                    <label class="form-check-label" for="no_vulnerabilities">
+                                        Skip vulnerability scanning
+                                    </label>
+                                    <div class="form-text">Disable security vulnerability detection (faster)</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <button type="button" class="btn btn-outline-secondary me-md-2" onclick="resetForm()">
+                            <i class="fas fa-undo me-2"></i>Reset
+                        </button>
+                        <button type="submit" class="btn btn-success btn-lg">
+                            <i class="fas fa-project-diagram me-2"></i>Generate Solution SBOM
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Results Section -->
+            {% if result %}
+            <div class="output-section">
+                <h4 class="mb-3">
+                    <i class="fas fa-{{ 'check-circle text-success' if result.success else 'exclamation-triangle text-danger' }} me-2"></i>
+                    {{ 'Success!' if result.success else 'Error' }}
+                </h4>
+                
+                <div class="mb-3">
+                    <strong>Command:</strong>
+                    <code class="ms-2">{{ result.command }}</code>
+                </div>
+                
+                {% if result.stdout %}
+                <div class="mb-3">
+                    <strong>Output:</strong>
+                    <div class="command-output">{{ result.stdout }}</div>
+                </div>
+                {% endif %}
+                
+                {% if result.stderr %}
+                <div class="mb-3">
+                    <strong>{{ 'Warnings:' if result.success else 'Errors:' }}</strong>
+                    <div class="command-output">{{ result.stderr }}</div>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+function resetForm() {
+    document.querySelector('form').reset();
+    document.getElementById('solution_path').value = '.';
+    document.getElementById('format').value = 'spdx';
+    document.getElementById('individual_sboms').checked = true;
+}
+</script>
+{% endblock %}

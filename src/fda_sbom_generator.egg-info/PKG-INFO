@@ -1,0 +1,158 @@
+Metadata-Version: 2.4
+Name: fda-sbom-generator
+Version: 0.1.0
+Summary: FDA-compliant Software Bill of Materials (SBOM) generator
+Author-email: Your Name <your.email@example.com>
+Maintainer-email: Your Name <your.email@example.com>
+License: MIT
+Project-URL: Homepage, https://github.com/yourusername/fda-sbom-generator
+Project-URL: Repository, https://github.com/yourusername/fda-sbom-generator
+Project-URL: Documentation, https://fda-sbom-generator.readthedocs.io
+Project-URL: Bug Tracker, https://github.com/yourusername/fda-sbom-generator/issues
+Keywords: sbom,fda,security,compliance,medical-device
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: Intended Audience :: Healthcare Industry
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Security
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Topic :: System :: Software Distribution
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: click>=8.0
+Requires-Dist: pydantic>=2.0
+Requires-Dist: packaging>=21.0
+Requires-Dist: requests>=2.28
+Requires-Dist: lxml>=4.9
+Requires-Dist: PyYAML>=6.0
+Requires-Dist: cyclonedx-python-lib>=3.0
+Requires-Dist: spdx-tools>=0.7
+Requires-Dist: pip-audit>=2.0
+Requires-Dist: safety>=2.0
+Requires-Dist: toml>=0.10
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.0; extra == "dev"
+Requires-Dist: black>=22.0; extra == "dev"
+Requires-Dist: flake8>=5.0; extra == "dev"
+Requires-Dist: mypy>=1.0; extra == "dev"
+Requires-Dist: pre-commit>=2.0; extra == "dev"
+Requires-Dist: sphinx>=5.0; extra == "dev"
+Requires-Dist: sphinx-rtd-theme>=1.0; extra == "dev"
+Provides-Extra: test
+Requires-Dist: pytest>=7.0; extra == "test"
+Requires-Dist: pytest-cov>=4.0; extra == "test"
+Requires-Dist: pytest-mock>=3.0; extra == "test"
+Provides-Extra: ui
+Requires-Dist: flask>=2.3.0; extra == "ui"
+Dynamic: license-file
+
+# FDA SBOM Generator
+
+A Python tool for generating Software Bill of Materials (SBOM) compliant with FDA guidelines for medical device cybersecurity.
+
+## Overview
+
+This tool automatically scans software projects and generates comprehensive SBOMs in FDA-compliant formats including SPDX, CycloneDX, and SWID tags. It's specifically designed to meet the FDA's cybersecurity guidelines for medical devices.
+
+## Features
+
+- **FDA Compliant**: Generates SBOMs following FDA cybersecurity guidelines
+- **Multiple Formats**: Supports SPDX, CycloneDX, and SWID tag formats
+- **Multi-Language Support**: Analyzes Python, JavaScript, Java, and C/C++ projects
+- **Vulnerability Detection**: Integrates with CVE databases for security analysis
+- **CI/CD Integration**: Easy integration with existing development pipelines
+- **Comprehensive Reporting**: Detailed compliance and security reports
+
+## Installation
+
+```bash
+pip install fda-sbom-generator
+```
+
+## Quick Start
+
+```bash
+# Generate SBOM for current directory
+fda-sbom generate
+
+# Generate SBOM with specific format
+fda-sbom generate --format spdx --output my-project.spdx
+
+# Validate existing SBOM
+fda-sbom validate my-project.spdx
+```
+
+## Usage
+
+### Command Line Interface
+
+```bash
+fda-sbom --help
+```
+
+### Python API
+
+```python
+from fda_sbom import SBOMGenerator
+
+generator = SBOMGenerator()
+sbom = generator.generate_sbom('/path/to/project')
+```
+
+## FDA Compliance
+
+This tool is designed to help medical device manufacturers comply with FDA cybersecurity requirements including:
+
+- Software Bill of Materials (SBOM) generation
+- Vulnerability assessments
+- Security documentation
+- Regulatory reporting
+
+## Development
+
+### Setup Development Environment
+
+```bash
+git clone https://github.com/yourusername/fda-sbom-generator.git
+cd fda-sbom-generator
+pip install -e .[dev]
+```
+
+### Running Tests
+
+```bash
+pytest tests/
+```
+
+### Code Quality
+
+```bash
+black src/
+flake8 src/
+mypy src/
+```
+
+## Contributing
+
+Please read our [Contributing Guide](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Support
+
+For questions and support, please open an issue on GitHub or contact our support team.
+
+## Disclaimer
+
+This tool is provided as-is and users are responsible for ensuring their SBOMs meet all applicable FDA requirements. Please consult with regulatory experts for compliance validation.

@@ -1,0 +1,259 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                <h1 class="display-4 fw-bold mb-4">
+                    <i class="fas fa-shield-alt me-3"></i>
+                    FDA SBOM Generator
+                </h1>
+                <p class="lead mb-4">
+                    Generate FDA-compliant Software Bill of Materials (SBOM) for medical device cybersecurity compliance.
+                </p>
+                <div class="d-flex gap-3">
+                    <a href="{{ url_for('generate') }}" class="btn btn-light btn-lg">
+                        <i class="fas fa-rocket me-2"></i>Generate SBOM
+                    </a>
+                    <a href="{{ url_for('solution') }}" class="btn btn-outline-light btn-lg">
+                        <i class="fas fa-project-diagram me-2"></i>Multi-Project
+                    </a>
+                </div>
+            </div>
+            <div class="col-lg-6 text-center">
+                <i class="fas fa-file-medical-alt" style="font-size: 200px; opacity: 0.3;"></i>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Features Section -->
+<section class="py-5">
+    <div class="container">
+        <div class="row text-center mb-5">
+            <div class="col">
+                <h2 class="fw-bold">Key Features</h2>
+                <p class="text-muted">Comprehensive SBOM generation for medical device software</p>
+            </div>
+        </div>
+        
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card feature-card h-100 text-center">
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <i class="fas fa-certificate text-primary" style="font-size: 48px;"></i>
+                        </div>
+                        <h5 class="card-title">FDA Compliant</h5>
+                        <p class="card-text">
+                            Generate SBOMs that meet FDA cybersecurity guidelines for medical devices.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card feature-card h-100 text-center">
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <i class="fas fa-code text-success" style="font-size: 48px;"></i>
+                        </div>
+                        <h5 class="card-title">Multi-Language</h5>
+                        <p class="card-text">
+                            Support for Python, JavaScript, Java, C#/.NET, and more programming languages.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card feature-card h-100 text-center">
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <i class="fas fa-shield-virus text-warning" style="font-size: 48px;"></i>
+                        </div>
+                        <h5 class="card-title">Security Scanning</h5>
+                        <p class="card-text">
+                            Integrated vulnerability detection with CVE database integration.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card feature-card h-100 text-center">
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <i class="fas fa-file-export text-info" style="font-size: 48px;"></i>
+                        </div>
+                        <h5 class="card-title">Multiple Formats</h5>
+                        <p class="card-text">
+                            Export to SPDX, CycloneDX, SWID, and JSON formats for maximum compatibility.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card feature-card h-100 text-center">
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <i class="fas fa-project-diagram text-purple" style="font-size: 48px;"></i>
+                        </div>
+                        <h5 class="card-title">Multi-Project</h5>
+                        <p class="card-text">
+                            Handle complex solutions with multiple projects and technologies.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card feature-card h-100 text-center">
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <i class="fas fa-terminal text-dark" style="font-size: 48px;"></i>
+                        </div>
+                        <h5 class="card-title">CLI & UI</h5>
+                        <p class="card-text">
+                            Use either the command-line interface or this web UI - your choice!
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Quick Start Section -->
+<section class="py-5 bg-light">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-6">
+                <h3 class="fw-bold mb-4">
+                    <i class="fas fa-rocket me-2 text-primary"></i>
+                    Quick Start Options
+                </h3>
+                
+                <div class="list-group">
+                    <a href="{{ url_for('generate') }}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h5 class="mb-1">
+                                <i class="fas fa-cogs me-2 text-primary"></i>
+                                Single Project SBOM
+                            </h5>
+                        </div>
+                        <p class="mb-1">Generate an SBOM for a single software project</p>
+                        <small>Perfect for individual applications or services</small>
+                    </a>
+                    
+                    <a href="{{ url_for('solution') }}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h5 class="mb-1">
+                                <i class="fas fa-project-diagram me-2 text-success"></i>
+                                Multi-Project Solution
+                            </h5>
+                        </div>
+                        <p class="mb-1">Scan entire solutions with multiple projects</p>
+                        <small>Ideal for complex medical device software platforms</small>
+                    </a>
+                    
+                    <a href="{{ url_for('scan') }}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h5 class="mb-1">
+                                <i class="fas fa-search me-2 text-info"></i>
+                                Quick Scan
+                            </h5>
+                        </div>
+                        <p class="mb-1">Preview what components would be found</p>
+                        <small>No SBOM generation, just component discovery</small>
+                    </a>
+                </div>
+            </div>
+            
+            <div class="col-lg-6">
+                <h3 class="fw-bold mb-4">
+                    <i class="fas fa-terminal me-2 text-success"></i>
+                    Command Line Alternative
+                </h3>
+                
+                <p>Prefer the command line? You can use all the same functionality:</p>
+                
+                <div class="bg-dark text-light p-3 rounded">
+                    <code>
+                        # Generate SBOM<br>
+                        fda-sbom generate ./my-project --manufacturer "MedDevice Corp"<br><br>
+                        
+                        # Multi-project solution<br>
+                        fda-sbom solution ./my-solution --solution-sbom<br><br>
+                        
+                        # Quick scan<br>
+                        fda-sbom scan ./my-project<br><br>
+                        
+                        # Validate existing SBOM<br>
+                        fda-sbom validate my-sbom.spdx.json
+                    </code>
+                </div>
+                
+                <div class="mt-3">
+                    <a href="{{ url_for('doctor') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-stethoscope me-2"></i>System Check
+                    </a>
+                    <small class="text-muted ms-3">Verify your installation</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Supported Technologies -->
+<section class="py-5">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h3 class="fw-bold">Supported Technologies</h3>
+            <p class="text-muted">Comprehensive coverage for medical device software</p>
+        </div>
+        
+        <div class="row g-3 text-center">
+            <div class="col-6 col-md-2">
+                <div class="p-3 border rounded">
+                    <i class="fab fa-python text-primary" style="font-size: 32px;"></i>
+                    <div class="small mt-2">Python</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-2">
+                <div class="p-3 border rounded">
+                    <i class="fab fa-js text-warning" style="font-size: 32px;"></i>
+                    <div class="small mt-2">JavaScript</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-2">
+                <div class="p-3 border rounded">
+                    <i class="fab fa-java text-danger" style="font-size: 32px;"></i>
+                    <div class="small mt-2">Java</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-2">
+                <div class="p-3 border rounded">
+                    <i class="fab fa-microsoft text-info" style="font-size: 32px;"></i>
+                    <div class="small mt-2">C# .NET</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-2">
+                <div class="p-3 border rounded">
+                    <i class="fas fa-file-code text-secondary" style="font-size: 32px;"></i>
+                    <div class="small mt-2">C/C++</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-2">
+                <div class="p-3 border rounded">
+                    <i class="fas fa-plus text-success" style="font-size: 32px;"></i>
+                    <div class="small mt-2">More...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
