@@ -5,6 +5,7 @@ Web UI for FDA SBOM Generator - Simple passthrough to CLI commands.
 import json
 import os
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -229,9 +230,6 @@ class SBOMWebUI:
     def _run_command(self, cmd: List[str]) -> Dict:
         """Run CLI command and return result."""
         try:
-            # Use the Python executable to run the CLI
-            import sys
-            
             # Add the project source directory to Python path
             project_src = Path(__file__).parent.parent.parent
             if str(project_src) not in sys.path:
