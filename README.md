@@ -27,7 +27,7 @@ This tool automatically scans software projects and generates comprehensive SBOM
 
 ```bash
 # Clone or download the project
-git clone https://github.com/yourusername/fda-sbom-generator.git
+git clone https://github.com/programmingpug/fda-sbom-generator.git
 cd fda-sbom-generator
 
 # Install in development mode
@@ -259,7 +259,7 @@ export_sbom(sbom, "device.cyclonedx.json", "cyclonedx")
 
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/fda-sbom-generator.git
+git clone https://github.com/programmingpug/fda-sbom-generator.git
 cd fda-sbom-generator
 
 # Install in development mode with all dependencies
@@ -354,10 +354,6 @@ fda-sbom --help
 fda-sbom generate --help
 ```
 
-## Contributing
-
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
-
 ### Development Workflow
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
@@ -376,11 +372,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 This tool is provided as-is to assist with FDA compliance documentation. Users are responsible for ensuring their SBOMs meet all applicable FDA requirements. Please consult with regulatory experts and legal counsel for compliance validation.
 
-## Support
-
-- **Issues**: [GitHub Issues](https://github.com/yourusername/fda-sbom-generator/issues)
-- **Documentation**: [Wiki](https://github.com/yourusername/fda-sbom-generator/wiki)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/fda-sbom-generator/discussions)
 
 ## Roadmap
 
