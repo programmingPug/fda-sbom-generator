@@ -173,6 +173,17 @@
                     <div class="command-output">{{ result.stderr }}</div>
                 </div>
                 {% endif %}
+                
+                {% if not result.success and result.debug_command %}
+                <div class="mb-3">
+                    <strong>Debug Info:</strong>
+                    <div class="command-output">
+Python: {{ result.debug_python_path }}
+Full Command: {{ result.debug_command | join(' ') }}
+Return Code: {{ result.returncode }}
+                    </div>
+                </div>
+                {% endif %}
             </div>
             {% endif %}
         </div>

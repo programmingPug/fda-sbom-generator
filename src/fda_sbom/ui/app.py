@@ -71,14 +71,23 @@ class SBOMWebUI:
                 # Run command
                 result = self._run_command(cmd)
                 
+                # Debug: Add command and result to the result for troubleshooting
+                result['debug_command'] = cmd
+                result['debug_python_path'] = sys.executable
+                
                 if result['success']:
                     flash('SBOM generated successfully!', 'success')
                     return render_template('generate.html', 
                                          result=result, 
                                          form_data=form_data)
                 else:
-                    flash(f'Error: {result["error"]}', 'error')
-                    return render_template('generate.html', form_data=form_data)
+                    error_msg = result.get('error', 'Unknown error occurred')
+                    if result.get('stderr'):
+                        error_msg = result['stderr']
+                    flash(f'Error: {error_msg}', 'error')
+                    return render_template('generate.html', 
+                                         result=result,
+                                         form_data=form_data)
             
             except Exception as e:
                 flash(f'Unexpected error: {str(e)}', 'error')
@@ -126,8 +135,13 @@ class SBOMWebUI:
                                          result=result, 
                                          form_data=form_data)
                 else:
-                    flash(f'Error: {result["error"]}', 'error')
-                    return render_template('solution.html', form_data=form_data)
+                    error_msg = result.get('error', 'Unknown error occurred')
+                    if result.get('stderr'):
+                        error_msg = result['stderr']
+                    flash(f'Error: {error_msg}', 'error')
+                    return render_template('solution.html',
+                                         result=result,
+                                         form_data=form_data)
             
             except Exception as e:
                 flash(f'Unexpected error: {str(e)}', 'error')
@@ -217,22 +231,49 @@ class SBOMWebUI:
         try:
             # Use the Python executable to run the CLI
             import sys
+            
+            # Add the project source directory to Python path
+            project_src = Path(__file__).parent.parent.parent
+            if str(project_src) not in sys.path:
+                env = os.environ.copy()
+                pythonpath = env.get('PYTHONPATH', '')
+                if str(project_src) not in pythonpath:
+                    env['PYTHONPATH'] = f"{project_src}{os.pathsep}{pythonpath}" if pythonpath else str(project_src)
+            else:
+                env = None
+            
             python_cmd = [sys.executable, '-m', 'fda_sbom.cli'] + cmd[1:]  # Skip 'fda-sbom'
             
             result = subprocess.run(
                 python_cmd,
                 capture_output=True,
                 text=True,
-                timeout=300  # 5 minute timeout
+                timeout=300,  # 5 minute timeout
+                env=env
             )
             
-            return {
+            # Determine error message
+            error_msg = None
+            if result.returncode != 0:
+                if result.stderr:
+                    error_msg = result.stderr
+                elif result.stdout:
+                    error_msg = result.stdout
+                else:
+                    error_msg = f"Command failed with return code {result.returncode}"
+            
+            response = {
                 'success': result.returncode == 0,
                 'stdout': result.stdout,
                 'stderr': result.stderr,
                 'returncode': result.returncode,
                 'command': ' '.join(cmd)
             }
+            
+            if error_msg:
+                response['error'] = error_msg
+            
+            return response
         
         except subprocess.TimeoutExpired:
             return {
