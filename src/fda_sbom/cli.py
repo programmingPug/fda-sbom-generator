@@ -49,6 +49,7 @@ def ui(host, port, debug):
 
 
 
+@cli.command()
 @click.argument('solution_path', type=click.Path(exists=True, path_type=Path))
 @click.option('--output-dir', '-o', type=click.Path(path_type=Path),
               help='Output directory for SBOMs')
@@ -158,6 +159,7 @@ def solution(ctx, solution_path, output_dir, format, solution_name, manufacturer
 
 
 
+@cli.command()
 @click.argument('project_path', type=click.Path(exists=True, path_type=Path))
 @click.option('--output', '-o', type=click.Path(path_type=Path), 
               help='Output file path')

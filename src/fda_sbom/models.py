@@ -65,7 +65,7 @@ class Vulnerability(BaseModel):
         json_encoders = {
             datetime: lambda v: v.isoformat()
         }
-        protected_namespaces = ()  # Allow model_number field
+        protected_namespaces = ()
 
 
 class Component(BaseModel):
@@ -107,6 +107,7 @@ class Component(BaseModel):
         json_encoders = {
             datetime: lambda v: v.isoformat()
         }
+        protected_namespaces = ()
 
 
 class SBOM(BaseModel):
@@ -145,6 +146,7 @@ class SBOM(BaseModel):
         json_encoders = {
             datetime: lambda v: v.isoformat()
         }
+        protected_namespaces = ()  # Allow model_number field
     
     def add_component(self, component: Component) -> None:
         """Add a component to the SBOM."""
@@ -219,3 +221,4 @@ class SBOMReport(BaseModel):
         json_encoders = {
             datetime: lambda v: v.isoformat()
         }
+        protected_namespaces = ()
