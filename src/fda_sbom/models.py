@@ -44,12 +44,6 @@ class License(BaseModel):
     text: Optional[str] = None
     url: Optional[str] = None
 
-    @validator('spdx_id')
-    def validate_spdx_id(cls, v):
-        if v and not v.startswith('SPDX-License-Identifier:'):
-            return f'SPDX-License-Identifier: {v}'
-        return v
-
 
 class Vulnerability(BaseModel):
     """Security vulnerability information."""

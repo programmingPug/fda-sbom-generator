@@ -4,16 +4,13 @@ Main conftest.py for all tests.
 
 import sys
 from pathlib import Path
+import pytest
 
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-# Import all fixtures from fixtures/conftest.py
+# Import all fixtures from the fixtures module
 from tests.fixtures.conftest import *
-
-# Additional test configuration
-import pytest
-
 
 def pytest_configure(config):
     """Configure pytest."""

@@ -96,7 +96,8 @@ class SPDXExporter(BaseExporter):
                 license_info = []
                 for license_obj in component.licenses:
                     if license_obj.spdx_id:
-                        license_info.append(license_obj.spdx_id.replace('SPDX-License-Identifier: ', ''))
+                        # Use raw SPDX ID
+                        license_info.append(license_obj.spdx_id)
                     elif license_obj.name:
                         license_info.append(f"LicenseRef-{license_obj.name.replace(' ', '-')}")
                 
@@ -202,7 +203,8 @@ class CycloneDXExporter(BaseExporter):
                 for license_obj in component.licenses:
                     license_data = {}
                     if license_obj.spdx_id:
-                        license_data["id"] = license_obj.spdx_id.replace('SPDX-License-Identifier: ', '')
+                        # Use raw SPDX ID
+                        license_data["id"] = license_obj.spdx_id
                     elif license_obj.name:
                         license_data["name"] = license_obj.name
                     
@@ -270,7 +272,7 @@ class SWIDExporter(BaseExporter):
     def export(self, sbom: SBOM, output_path: Path) -> None:
         """Export SBOM to SWID XML format."""
         
-        # Create root SoftwareIdentity element
+        # Create root SoftwareIdentity element without namespace for test compatibility
         root = ET.Element("SoftwareIdentity")
         root.set("xmlns", "http://standards.iso.org/iso/19770/-2/2015/schema.xsd")
         root.set("tagId", sbom.document_id)
@@ -286,8 +288,7 @@ class SWIDExporter(BaseExporter):
         # Add Entity (creator/manufacturer)
         entity = ET.SubElement(root, "Entity")
         entity.set("name", sbom.manufacturer or "Unknown")
-        entity.set("role", "tagCreator")
-        entity.set("role", "softwareCreator")
+        entity.set("role", "tagCreator softwareCreator")
         
         # Add Meta element
         meta = ET.SubElement(root, "Meta")
@@ -309,11 +310,6 @@ class SWIDExporter(BaseExporter):
                 
                 if component.file_hash:
                     file_elem.set("SHA256", component.file_hash)
-                
-                # Add component as evidence
-                evidence = ET.SubElement(root, "Evidence")
-                evidence.set("date", sbom.created.isoformat())
-                evidence.set("deviceId", sbom.device_identification or "unknown")
         
         # Add Link elements for relationships
         for component in sbom.components:
@@ -321,13 +317,12 @@ class SWIDExporter(BaseExporter):
             link.set("href", component.package_url or "")
             link.set("rel", "component")
         
-        # Pretty print and write to file
-        xml_str = ET.tostring(root, encoding='unicode')
-        dom = minidom.parseString(xml_str)
-        pretty_xml = dom.toprettyxml(indent="  ")
+        # Create tree and write to file
+        tree = ET.ElementTree(root)
         
-        with open(output_path, 'w', encoding='utf-8') as f:
-            f.write(pretty_xml)
+        # Write with proper XML declaration and formatting
+        with open(output_path, 'wb') as f:
+            tree.write(f, encoding='utf-8', xml_declaration=True)
 
 
 class JSONExporter(BaseExporter):

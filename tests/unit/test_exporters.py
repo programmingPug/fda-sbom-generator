@@ -226,13 +226,20 @@ class TestSWIDExporter:
             tree = ET.parse(output_file)
             root = tree.getroot()
             
-            assert root.tag == "SoftwareIdentity"
+            # Handle XML namespace - get local name only
+            tag_name = root.tag.split('}')[-1] if '}' in root.tag else root.tag
+            assert tag_name == "SoftwareIdentity"
             assert root.get("tagId") == sample_fda_compliant_sbom.document_id
             assert root.get("name") == sample_fda_compliant_sbom.document_name
             assert root.get("version") == sample_fda_compliant_sbom.target_version
             
-            # Check for Entity element
-            entity = root.find("Entity")
+            # Check for Entity element - handle namespace
+            # Try with namespace first
+            ns = {'': 'http://standards.iso.org/iso/19770/-2/2015/schema.xsd'}
+            entity = root.find(".//{{{}}}Entity".format(ns['']))
+            if entity is None:
+                # Try without namespace
+                entity = root.find("Entity")
             assert entity is not None
             assert entity.get("name") == sample_fda_compliant_sbom.manufacturer
     
@@ -247,17 +254,24 @@ class TestSWIDExporter:
             tree = ET.parse(output_file)
             root = tree.getroot()
             
-            # Check for Payload
-            payload = root.find("Payload")
+            # Check for Payload - handle namespace
+            ns = {'': 'http://standards.iso.org/iso/19770/-2/2015/schema.xsd'}
+            payload = root.find(".//{{{}}}Payload".format(ns['']))
+            if payload is None:
+                payload = root.find("Payload")
             if sample_fda_compliant_sbom.components:
                 assert payload is not None
                 
                 # Check directories for each component
-                directories = payload.findall("Directory")
+                directories = payload.findall(".//{{{}}}Directory".format(ns['']))
+                if not directories:
+                    directories = payload.findall("Directory")
                 assert len(directories) == len(sample_fda_compliant_sbom.components)
             
-            # Check for Link elements
-            links = root.findall("Link")
+            # Check for Link elements - handle namespace
+            links = root.findall(".//{{{}}}Link".format(ns['']))
+            if not links:
+                links = root.findall("Link")
             assert len(links) == len(sample_fda_compliant_sbom.components)
 
 

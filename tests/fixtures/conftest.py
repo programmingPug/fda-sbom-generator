@@ -212,22 +212,42 @@ EndProject
 """
     (api_dir / "DeviceApi.csproj").write_text(api_csproj.strip())
     
-    # Create DeviceUI project  
+    # Create DeviceUI project with both .csproj and package.json
     ui_dir = solution_path / "DeviceUI"
     ui_dir.mkdir()
+    
+    # Add package.json for JavaScript detection
     ui_package_json = {
         "name": "device-ui",
         "version": "1.0.0",
         "dependencies": {
-            "react": "^18.2.0"
+            "react": "^18.2.0",
+            "axios": "^1.3.0"
+        },
+        "devDependencies": {
+            "webpack": "^5.75.0"
         }
     }
     (ui_dir / "package.json").write_text(json.dumps(ui_package_json, indent=2))
+    
+    # Add JavaScript file
+    (ui_dir / "index.js").write_text("const React = require('react');")
     
     # Create shared Python utilities
     python_dir = solution_path / "shared-utils"
     python_dir.mkdir()
     (python_dir / "requirements.txt").write_text("pydantic>=2.0.0\nrequests>=2.28.0")
+    
+    # Add a package.json at root level to help with JavaScript detection
+    root_package_json = {
+        "name": "medical-device-workspace",
+        "private": True,
+        "workspaces": ["DeviceUI"],
+        "devDependencies": {
+            "eslint": "^8.0.0"
+        }
+    }
+    (solution_path / "package.json").write_text(json.dumps(root_package_json, indent=2))
     
     return solution_path
 
@@ -269,7 +289,8 @@ def sample_sbom(sample_component, sample_vulnerability):
         target_version="1.0.0",
         manufacturer="Test Medical Devices Inc",
         model_number="TMD-001",
-        fda_submission_id="K230001"
+        fda_submission_id="K230001",
+        creators=["fda-sbom-generator-0.1.0"]
     )
     
     # Add component with vulnerability
@@ -292,7 +313,8 @@ def sample_fda_compliant_sbom():
         manufacturer="Acme Medical Devices Inc",
         model_number="CMD-2024",
         fda_submission_id="K240015",
-        device_identification="UDI-DI-12345678901234"
+        device_identification="UDI-DI-12345678901234",
+        creators=["fda-sbom-generator-0.1.0"]
     )
     
     # Add required components with all FDA metadata
@@ -313,7 +335,8 @@ def sample_fda_compliant_sbom():
             type=ComponentType.FIRMWARE,
             description="Device firmware component",
             supplier="Hardware Solutions Inc",
-            licenses=[License(name="Proprietary", text="Proprietary license")]
+            licenses=[License(name="Proprietary", text="Proprietary license")],
+            package_url="pkg:generic/device-firmware@1.5.2"
         ),
         Component(
             name=".NET",
@@ -322,7 +345,8 @@ def sample_fda_compliant_sbom():
             package_manager="dotnet",
             description=".NET Runtime",
             supplier="Microsoft Corporation",
-            licenses=[License(name="MIT", spdx_id="MIT")]
+            licenses=[License(name="MIT", spdx_id="MIT")],
+            package_url="pkg:generic/dotnet@8.0"
         )
     ]
     

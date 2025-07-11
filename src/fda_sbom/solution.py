@@ -224,6 +224,26 @@ class SolutionScanner:
         
         return projects
     
+    def _scan_python_workspace(self, solution_path: Path) -> Dict[str, Path]:
+        """Scan Python workspace for projects."""
+        projects = {}
+        
+        # Look for pyproject.toml files with workspace definitions
+        pyproject_file = solution_path / 'pyproject.toml'
+        if pyproject_file.exists():
+            try:
+                import toml
+                with open(pyproject_file, 'r', encoding='utf-8') as f:
+                    data = toml.load(f)
+                
+                # Check for workspace in tool.setuptools or similar
+                # This is a basic implementation
+                projects[solution_path.name] = solution_path
+            except Exception as e:
+                print(f"Warning: Could not parse Python workspace: {e}")
+        
+        return projects
+    
     def _scan_generic_projects(self, solution_path: Path) -> Dict[str, Path]:
         """Generic project detection by scanning for project indicators."""
         projects = {}

@@ -46,7 +46,7 @@ class SBOMWebUI:
                 project_path = form_data.get('project_path', '.')
                 
                 # Build CLI command
-                cmd = ['fda-sbom', 'generate', project_path]
+                cmd = ['fda-sbom', '--verbose', 'generate', project_path]
                 
                 # Add optional parameters
                 if form_data.get('manufacturer'):
@@ -65,9 +65,6 @@ class SBOMWebUI:
                     cmd.append('--no-vulnerabilities')
                 if form_data.get('update_licenses'):
                     cmd.append('--update-licenses')
-                
-                # Add verbose flag
-                cmd.append('--verbose')
                 
                 # Run command
                 result = self._run_command(cmd)
@@ -105,7 +102,7 @@ class SBOMWebUI:
                 solution_path = form_data.get('solution_path', '.')
                 
                 # Build CLI command
-                cmd = ['fda-sbom', 'solution', solution_path]
+                cmd = ['fda-sbom', '--verbose', 'solution', solution_path]
                 
                 # Add optional parameters
                 if form_data.get('manufacturer'):
@@ -124,8 +121,6 @@ class SBOMWebUI:
                     cmd.append('--solution-sbom')
                 if form_data.get('no_vulnerabilities'):
                     cmd.append('--no-vulnerabilities')
-                
-                cmd.append('--verbose')
                 
                 # Run command
                 result = self._run_command(cmd)
@@ -163,12 +158,10 @@ class SBOMWebUI:
                     return render_template('validate.html')
                 
                 # Build CLI command
-                cmd = ['fda-sbom', 'validate', sbom_file]
+                cmd = ['fda-sbom', '--verbose', 'validate', sbom_file]
                 
                 if form_data.get('format'):
                     cmd.extend(['--format', form_data['format']])
-                
-                cmd.append('--verbose')
                 
                 # Run command
                 result = self._run_command(cmd)
@@ -192,7 +185,7 @@ class SBOMWebUI:
                 project_path = form_data.get('project_path', '.')
                 
                 # Build CLI command
-                cmd = ['fda-sbom', 'scan', project_path, '--verbose']
+                cmd = ['fda-sbom', '--verbose', 'scan', project_path]
                 
                 # Run command
                 result = self._run_command(cmd)
@@ -210,7 +203,7 @@ class SBOMWebUI:
             """System check page."""
             try:
                 # Run doctor command
-                cmd = ['fda-sbom', 'doctor', '--check-dependencies']
+                cmd = ['fda-sbom', '--verbose', 'doctor', '--check-dependencies']
                 result = self._run_command(cmd)
                 
                 return render_template('doctor.html', result=result)

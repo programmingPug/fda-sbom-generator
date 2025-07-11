@@ -53,6 +53,9 @@ class BaseScanner(ABC):
         if not license_text:
             return License(name="Unknown")
         
+        # Clean up the license text
+        license_text = license_text.strip()
+        
         # Common SPDX license mappings
         spdx_mappings = {
             "MIT": "MIT",
@@ -63,9 +66,20 @@ class BaseScanner(ABC):
             "LGPL-2.1": "LGPL-2.1-only",
         }
         
+        # Check for direct match first
+        if license_text in spdx_mappings:
+            return License(
+                spdx_id=spdx_mappings[license_text],
+                name=license_text
+            )
+        
+        # Check for partial matches
         for pattern, spdx_id in spdx_mappings.items():
             if pattern.lower() in license_text.lower():
-                return License(spdx_id=spdx_id, name=license_text)
+                return License(
+                    spdx_id=spdx_id,
+                    name=license_text
+                )
         
         return License(name=license_text)
 
@@ -130,7 +144,9 @@ class PythonScanner(BaseScanner):
                 license_text = ""
                 
                 if result.returncode == 0:
-                    for line in result.stdout.split('\n'):
+                    # Handle both regular newlines and escaped newlines in the output
+                    lines = result.stdout.replace('\\n', '\n').split('\n')
+                    for line in lines:
                         if line.startswith("Summary:"):
                             description = line.split(":", 1)[1].strip()
                         elif line.startswith("Home-page:"):
@@ -333,29 +349,49 @@ class JavaScanner(BaseScanner):
             import xml.etree.ElementTree as ET
             
             with open(pom_file, 'r', encoding='utf-8') as f:
-                root = ET.parse(f)
+                tree = ET.parse(f)
+                root = tree.getroot()
             
-            # Find dependencies (simplified, no namespace handling for now)
-            dependencies = root.findall('.//dependency')
+            # Handle Maven namespace
+            namespaces = {}
+            if root.tag.startswith('{'):
+                namespace = root.tag[1:root.tag.index('}')]
+                namespaces['mvn'] = namespace
+                dependency_xpath = './/mvn:dependency'
+                group_xpath = 'mvn:groupId'
+                artifact_xpath = 'mvn:artifactId' 
+                version_xpath = 'mvn:version'
+            else:
+                dependency_xpath = './/dependency'
+                group_xpath = 'groupId'
+                artifact_xpath = 'artifactId'
+                version_xpath = 'version'
+            
+            # Find dependencies
+            dependencies = root.findall(dependency_xpath, namespaces)
             
             for dep in dependencies:
-                group_id_elem = dep.find('groupId')
-                artifact_id_elem = dep.find('artifactId')
-                version_elem = dep.find('version')
+                group_id_elem = dep.find(group_xpath, namespaces)
+                artifact_id_elem = dep.find(artifact_xpath, namespaces)
+                version_elem = dep.find(version_xpath, namespaces)
                 
                 if group_id_elem is not None and artifact_id_elem is not None:
-                    name = f"{group_id_elem.text}:{artifact_id_elem.text}"
+                    group_id = group_id_elem.text
+                    artifact_id = artifact_id_elem.text
                     version_text = version_elem.text if version_elem is not None else "unknown"
                     
-                    component = Component(
-                        name=name,
-                        version=version_text,
-                        type=ComponentType.LIBRARY,
-                        package_manager="maven",
-                        namespace=group_id_elem.text,
-                        package_url=f"pkg:maven/{group_id_elem.text}/{artifact_id_elem.text}@{version_text}"
-                    )
-                    components.append(component)
+                    if group_id and artifact_id:  # Ensure we have valid text
+                        name = f"{group_id}:{artifact_id}"
+                        
+                        component = Component(
+                            name=name,
+                            version=version_text,
+                            type=ComponentType.LIBRARY,
+                            package_manager="maven",
+                            namespace=group_id,
+                            package_url=f"pkg:maven/{group_id}/{artifact_id}@{version_text}"
+                        )
+                        components.append(component)
         
         except Exception as e:
             print(f"Warning: Could not parse pom.xml: {e}")
@@ -430,6 +466,11 @@ class DotNetScanner(BaseScanner):
         for project_file in project_files:
             components.extend(self._scan_project_file(project_file))
         
+        # Also check for packages.config files
+        packages_configs = list(self.project_path.rglob("packages.config"))
+        for packages_file in packages_configs:
+            components.extend(self._scan_packages_config(packages_file))
+        
         return components
     
     def _scan_project_file(self, project_file: Path) -> List[Component]:
@@ -441,8 +482,21 @@ class DotNetScanner(BaseScanner):
             tree = ET.parse(project_file)
             root = tree.getroot()
             
+            # Handle MSBuild namespace
+            namespaces = {}
+            if root.tag.startswith('{'):
+                namespace = root.tag[1:root.tag.index('}')]
+                namespaces['msbuild'] = namespace
+                package_xpath = './/msbuild:PackageReference'
+                framework_xpath = './/msbuild:TargetFramework'
+                frameworks_xpath = './/msbuild:TargetFrameworks'
+            else:
+                package_xpath = './/PackageReference'
+                framework_xpath = './/TargetFramework'
+                frameworks_xpath = './/TargetFrameworks'
+            
             # Find PackageReference elements
-            package_references = root.findall(".//PackageReference")
+            package_references = root.findall(package_xpath, namespaces)
             for pkg_ref in package_references:
                 package_id = pkg_ref.get("Include")
                 version = pkg_ref.get("Version")
@@ -456,11 +510,115 @@ class DotNetScanner(BaseScanner):
                         package_url=f"pkg:nuget/{package_id}@{version or 'unknown'}"
                     )
                     components.append(component)
+            
+            # Find TargetFramework and add .NET runtime component
+            target_frameworks = root.findall(framework_xpath, namespaces)
+            if not target_frameworks:
+                target_frameworks = root.findall(frameworks_xpath, namespaces)
+            
+            for tf_elem in target_frameworks:
+                framework_text = tf_elem.text
+                if framework_text:
+                    runtime_info = self._parse_target_framework(framework_text)
+                    if runtime_info:
+                        runtime_component = Component(
+                            name=runtime_info["name"],
+                            version=runtime_info["version"],
+                            type=ComponentType.FRAMEWORK,
+                            description=f"{runtime_info['name']} Runtime"
+                        )
+                        components.append(runtime_component)
+                    break  # Only process first target framework
         
         except Exception as e:
             print(f"Warning: Could not parse project file {project_file}: {e}")
         
         return components
+    
+    def _scan_packages_config(self, packages_file: Path) -> List[Component]:
+        """Scan packages.config file for legacy .NET Framework projects."""
+        components = []
+        
+        try:
+            import xml.etree.ElementTree as ET
+            tree = ET.parse(packages_file)
+            root = tree.getroot()
+            
+            # Find package elements
+            for package in root.findall('package'):
+                package_id = package.get('id')
+                version = package.get('version')
+                target_framework = package.get('targetFramework')
+                
+                if package_id and version:
+                    component = Component(
+                        name=package_id,
+                        version=version,
+                        type=ComponentType.LIBRARY,
+                        package_manager="nuget",
+                        package_url=f"pkg:nuget/{package_id}@{version}"
+                    )
+                    components.append(component)
+        
+        except Exception as e:
+            print(f"Warning: Could not parse packages.config file {packages_file}: {e}")
+        
+        return components
+    
+    def _parse_target_framework(self, framework: str) -> Optional[Dict]:
+        """Parse target framework string to extract .NET version info."""
+        if not framework:
+            return None
+        
+        framework = framework.lower().strip()
+        
+        # .NET 5+ (net5.0, net6.0, net7.0, net8.0)
+        if framework.startswith('net') and '.' in framework:
+            version_part = framework[3:]  # Remove 'net' prefix
+            if version_part.replace('.', '').isdigit():
+                return {
+                    "name": ".NET",
+                    "version": version_part
+                }
+        
+        # .NET Framework (net45, net48, etc.)
+        if framework.startswith('net') and framework[3:].isdigit():
+            version_code = framework[3:]
+            version_mapping = {
+                "45": "4.5",
+                "451": "4.5.1",
+                "452": "4.5.2",
+                "46": "4.6",
+                "461": "4.6.1",
+                "462": "4.6.2",
+                "47": "4.7",
+                "471": "4.7.1",
+                "472": "4.7.2",
+                "48": "4.8"
+            }
+            version = version_mapping.get(version_code, f"4.{version_code[0]}.{version_code[1:]}")
+            return {
+                "name": ".NET Framework",
+                "version": version
+            }
+        
+        # .NET Core (netcoreapp2.1, netcoreapp3.1)
+        if framework.startswith('netcoreapp'):
+            version = framework.replace('netcoreapp', '')
+            return {
+                "name": ".NET Core",
+                "version": version
+            }
+        
+        # .NET Standard (netstandard2.0, netstandard2.1)
+        if framework.startswith('netstandard'):
+            version = framework.replace('netstandard', '')
+            return {
+                "name": ".NET Standard",
+                "version": version
+            }
+        
+        return None
 
 
 class FileScanner(BaseScanner):

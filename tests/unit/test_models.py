@@ -36,17 +36,17 @@ class TestLicense:
         )
         
         assert license_obj.name == "Apache License 2.0"
-        assert license_obj.spdx_id == "SPDX-License-Identifier: Apache-2.0"
+        assert license_obj.spdx_id == "Apache-2.0"  # No prefix added anymore
         assert "Apache License" in license_obj.text
         assert license_obj.url == "https://www.apache.org/licenses/LICENSE-2.0"
     
     def test_spdx_id_validation(self):
         """Test SPDX ID validation and formatting."""
-        # Should add prefix if not present
+        # No prefix is added anymore since we removed the validator
         license_obj = License(spdx_id="MIT")
-        assert license_obj.spdx_id == "SPDX-License-Identifier: MIT"
+        assert license_obj.spdx_id == "MIT"
         
-        # Should not double-prefix
+        # Prefix is kept as-is if provided
         license_obj2 = License(spdx_id="SPDX-License-Identifier: GPL-3.0")
         assert license_obj2.spdx_id == "SPDX-License-Identifier: GPL-3.0"
 

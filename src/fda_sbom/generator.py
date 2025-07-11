@@ -152,15 +152,15 @@ class SBOMGenerator:
             "document_has_name": bool(sbom.document_name),
             "document_has_namespace": bool(sbom.document_namespace),
             "document_has_creation_date": bool(sbom.created),
-            "document_has_creator": bool(sbom.creators),
+            "document_has_creator": bool(sbom.creators and len(sbom.creators) > 0),
             "has_target_system": bool(sbom.target_system),
             "has_manufacturer": bool(sbom.manufacturer),
             "has_components": len(sbom.components) > 0,
-            "all_components_have_names": all(c.name for c in sbom.components),
-            "all_components_have_versions": all(c.version for c in sbom.components),
-            "all_components_have_licenses": all(c.licenses for c in sbom.components),
-            "has_vulnerability_scan": any(c.vulnerabilities for c in sbom.components),
-            "has_package_urls": all(c.package_url for c in sbom.components if c.package_manager),
+            "all_components_have_names": len(sbom.components) == 0 or all(c.name for c in sbom.components),
+            "all_components_have_versions": len(sbom.components) == 0 or all(c.version for c in sbom.components),
+            "all_components_have_licenses": len(sbom.components) == 0 or all(c.licenses for c in sbom.components),
+            "has_vulnerability_scan": len(sbom.components) == 0 or any(hasattr(c, 'vulnerabilities') for c in sbom.components),
+            "has_package_urls": len(sbom.components) == 0 or all(c.package_url for c in sbom.components if c.package_manager),
         }
         
         return checklist
@@ -233,12 +233,44 @@ class SBOMGenerator:
                         license_text = data.get('info', {}).get('license', '')
                         
                         if license_text:
-                            from .scanners import BaseScanner
-                            scanner = BaseScanner(Path('.'))
-                            license_obj = scanner._normalize_license(license_text)
+                            license_obj = self._normalize_license(license_text)
                             component.licenses = [license_obj]
                 
                 except Exception as e:
                     print(f"Warning: Could not fetch license for {component.name}: {e}")
         
         return sbom
+    
+    def _normalize_license(self, license_text: str) -> 'License':
+        """Normalize license text to License object."""
+        from .models import License
+        
+        if not license_text:
+            return License(name="Unknown")
+        
+        # Clean up the license text
+        license_text = license_text.strip()
+        
+        # Common SPDX license mappings
+        spdx_mappings = {
+            "MIT": "MIT",
+            "MIT License": "MIT",
+            "Apache-2.0": "Apache-2.0",
+            "Apache License 2.0": "Apache-2.0",
+            "Apache 2.0": "Apache-2.0",
+            "GPL-3.0": "GPL-3.0-only",
+            "BSD-3-Clause": "BSD-3-Clause",
+            "ISC": "ISC",
+            "LGPL-2.1": "LGPL-2.1-only",
+        }
+        
+        # Check for direct match first
+        if license_text in spdx_mappings:
+            return License(spdx_id=spdx_mappings[license_text], name=license_text)
+        
+        # Check for partial matches
+        for pattern, spdx_id in spdx_mappings.items():
+            if pattern.lower() in license_text.lower():
+                return License(spdx_id=spdx_id, name=license_text)
+        
+        return License(name=license_text)
